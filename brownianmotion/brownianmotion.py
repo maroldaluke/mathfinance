@@ -49,16 +49,18 @@ class RandomWalk(object):
         self.y.append(y)
         self.z.append(z)
 
-timesteps = [10, 5, 1, 0.5, 0.25, 0.1, 0.01, 0.001, 0.0001]
+if __name__ == "__main__":
 
-fig = plt.figure()
-ax = plt.axes(projection='3d')
+    timesteps = [10, 5, 1, 0.5, 0.25, 0.1, 0.01, 0.001, 0.0001]
 
-for time in timesteps:
-    
-    rw = RandomWalk(0.5, time)
-    rw.simulate(100)
-    # plt.plot(rw.x, rw.y, linewidth=2.0)
-    ax.plot3D(rw.y, rw.z, rw.x)
+    fig = plt.figure()
+    ax = plt.axes(projection='3d')
 
-plt.show()
+    for time in timesteps:
+        
+        rw = RandomWalk(0.5, time)
+        rw.simulate(100)
+        # plt.plot(rw.x, rw.y, linewidth=2.0)
+        ax.plot3D(rw.y, rw.z, rw.x)
+
+    plt.show()
