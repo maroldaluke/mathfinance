@@ -17,7 +17,8 @@ class Model(object):
     """
     def modelstock(self, C, S0, K, T, t, r):
         # first get the implied vol
-        iv = ImpliedVolatility().computevol(C, S0, K, T, t, r)
+        vol = ImpliedVolatility()
+        iv = vol.computevolfast(C, S0, K, T, t, r)
         # now model the stock
         N = (T - t) * self.daycount
         alpha, sigma = StockModel.normalize(N, r, iv)
@@ -33,7 +34,7 @@ if __name__ == "__main__":
 
     # establish our model parameters
     S0 = 50
-    K = 75
+    K = 70
     T = 2
     t = 0
     r = 0.05
