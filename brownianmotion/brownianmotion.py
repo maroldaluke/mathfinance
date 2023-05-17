@@ -61,6 +61,6 @@ if __name__ == "__main__":
         rw = RandomWalk(0.5, time)
         rw.simulate(100)
         # plt.plot(rw.x, rw.y, linewidth=2.0)
-        ax.plot3D(rw.y, rw.z, rw.x)
+        ax.plot3D(rw.x, rw.y, rw.z)
 
     plt.show()
