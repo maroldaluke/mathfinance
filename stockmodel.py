@@ -67,21 +67,23 @@ sigma: volatility parameter
 """
 class StockModel(object):
 
-    def __init__(self, s0, drift, vol):
+    def __init__(self, N, s0, drift, vol, timestep = 0.001):
 
+        self.N = N
+        self.timestep = timestep
         self.t = [0]
         self.s0 = s0
         self.st = [s0]
-        self.bm = BrownianMotion()
-        self.alpha = drift
-        self.sigma = vol
+        self.bm = BrownianMotion(timestep)
+        # automatically normalize the alpha / sigma
+        self.alpha, self.sigma = StockModel.normalize(N, drift, vol)
 
     @staticmethod
-    def plotstock(num, iterations, s0, drift, vol):
+    def plotstock(num, iterations, s0, drift, vol, timestep):
 
         ax = plt.axes()
         for i in range(num): 
-            s = StockModel(s0, drift, vol)
+            s = StockModel(iterations, s0, drift, vol, timestep)
             s.simulate(iterations)
             ax.plot(s.t, s.st)
         plt.show()
@@ -93,9 +95,14 @@ class StockModel(object):
         vol = volatility / m.sqrt(n)
         return (rate, vol)
 
+    def model(self):
+
+        self.simulate(self.N)
+        return (self.t, self.st)
+
     def simulate(self, totaltime):
 
-        steps = m.floor(totaltime / self.bm.timestep)
+        steps = m.floor(totaltime / self.timestep)
         for i in range(steps): self.iterate()
 
     def iterate(self):
@@ -140,11 +147,15 @@ S = 0.10 -> S / sqrt(N) = 0.10 / 10 = 0.01
 if __name__ == "__main__":
 
     I = 5
-    N =  365
+    N = 365
     S0 = 50
     A = 0.05
     S = 0.125
+    timestep = 0.01
 
-    alpha, sigma = StockModel.normalize(N, A, S)
-    print(alpha, sigma)
-    StockModel.plotstock(I, N, S0, alpha, sigma)
+    """
+    stock = StockModel(N, S0, A, S)
+    (t, st) = stock.model()
+    """
+
+    StockModel.plotstock(I, N, S0, A, S, timestep)

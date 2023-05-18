@@ -7,6 +7,7 @@ class Model(object):
 
         self.daycount = 256
         self.iterations = 5
+        self.timestep = 0.01
 
     """
     
@@ -28,7 +29,7 @@ class Model(object):
         print("Normalized Alpha: ", alpha)
         print("Annualized Volatility", iv)
         print("Normalized Sigma", sigma)
-        StockModel.plotstock(self.iterations, N, S0, alpha, sigma)
+        StockModel.plotstock(self.iterations, N, S0, r, iv, self.timestep)
 
 if __name__ == "__main__":
 
@@ -39,6 +40,7 @@ if __name__ == "__main__":
     t = 0
     r = 0.05
     vol = 0.07
+
     # first compute a call price which can be used to find the volatility
     C = ImpliedVolatility.computeprice(S0, K, T, t, r, vol)
     print("Call Price: ", C)
