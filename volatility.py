@@ -180,11 +180,11 @@ class ImpliedVolatility(object):
 if __name__ == "__main__":
 
     S = 42
-    K = 50
+    K = 70
     T = 10
     t = 5
     r = 0.05
-    sigma = 0.067833872743239
+    sigma = 0.11435117637
 
     C = ImpliedVolatility.computeprice(S, K, T, t, r, sigma)
     print("Call Price: ", C)
