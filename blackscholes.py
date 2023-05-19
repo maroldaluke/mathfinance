@@ -31,7 +31,7 @@ class BlackScholes(object):
     @staticmethod
     def computecallprice(S, K, tau, r, sigma):
 
-        # need to ensure tau does not reach 0
+        # need to ensure tau does not reach 0 or below (float pt in python)
         if (tau <= 0): return max(0, S - K)
         # first compute the integral bounds
         coef = 1 / (sigma * m.sqrt(tau))
