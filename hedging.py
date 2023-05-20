@@ -24,6 +24,8 @@ class OptionsPortfolio(object):
         self.options = securities
         self.t = []
         self.price = []
+        self.delta = []
+        self.gamma = []
 
     def model(self, t, st):
         
@@ -34,15 +36,23 @@ class OptionsPortfolio(object):
         # now iterate through and add the values of each component option
         totalsteps = len(t)
         for i in range(totalsteps):
-            val = 0
+            p, d, g = 0, 0, 0
             for o in self.options:
                 option = o[0]
                 side = o[1]
-                # update value based on position side
-                if (side == "LONG"): val += option.price[i]
-                elif (side == "SHORT"): val -= option.price[i]
+                # update values based on position side
+                if (side == "LONG"): 
+                    p += option.price[i]
+                    d += option.delta[i]
+                    g += option.gamma[i]
+                elif (side == "SHORT"): 
+                    p -= option.price[i]
+                    d -= option.delta[i]
+                    g -= option.gamma[i]
             self.t.append(t[i])
-            self.price.append(val)
+            self.price.append(p)
+            self.delta.append(d)
+            self.gamma.append(g)
 
 class OptionModel(object):
 
@@ -63,6 +73,9 @@ class OptionModel(object):
         self.timestep = timestep
         self.t = []
         self.price = []
+        # greeks
+        self.delta = []
+        self.gamma = []
         # we need a model for the underlying
         self.underlying = underlying
 
@@ -71,15 +84,20 @@ class OptionModel(object):
         # now compute the options prices at each time interval
         totalsteps = len(t)
         for i in range(totalsteps):
-            p = 0
+            p, d, g = 0, 0, 0
             currtime, currstock = t[i], st[i]
             if (self.option == OptionModel.CALL): 
                 p = self.__computecallprice(currtime, currstock)
+                d = self.__computecalldelta(currtime, currstock)
             elif (self.option == OptionModel.PUT): 
                 p = self.__computeputprice(currtime, currstock)
+                d = self.__computeputdelta(currtime, currstock)
+            g = self.__computegamma(currtime, currstock)
             # append the necessary results
             self.t.append(currtime)
             self.price.append(p)
+            self.delta.append(d)
+            self.gamma.append(g)
 
     def __computetimetoexpiry(self, t, T):
 
@@ -99,6 +117,24 @@ class OptionModel(object):
         tau = self.__computetimetoexpiry(t, self.T)
         P = BlackScholes.computeputprice(st, self.K, tau, self.r, self.sigma)
         return P
+    
+    def __computecalldelta(self, t, st):
+
+        tau = self.__computetimetoexpiry(t, self.T)
+        D = BlackScholes.computecalldelta(st, self.K, tau, self.r, self.sigma)
+        return D
+    
+    def __computeputdelta(self, t, st):
+
+        tau = self.__computetimetoexpiry(t, self.T)
+        D = BlackScholes.computeputdelta(st, self.K, tau, self.r, self.sigma)
+        return D
+
+    def __computegamma(self, t, st):
+
+        tau = self.__computetimetoexpiry(t, self.T)
+        G = BlackScholes.computegamma(st, self.K, tau, self.r, self.sigma)
+        return G
 
 if __name__ == "__main__":
 
@@ -131,6 +167,34 @@ if __name__ == "__main__":
         pm.model(t, st)
         # plot the result!
         ax.plot(pm.t, pm.price)
+        plt.show()
+
+    def graphgreeks():
+
+        # options parameters
+        K1, K2, K3 = 50, 60, 50
+        T1, T2, T3 = 2, 2, 2
+        V1, V2, V3 = OptionModel.CALL, OptionModel.CALL, OptionModel.CALL
+
+        _, ax = plt.subplots(3)
+        stock = StockModel(N, S0, r, vol, timestep)
+        # first model the underlying
+        (t, st) = stock.model()
+        ax[0].set_title("Stock Price")
+        ax[0].plot(t, st)
+        # now build our options models
+        om1 = OptionModel(V1, K1, T1, r, vol, stock, timestep)
+        om2 = OptionModel(V2, K2, T2, r, vol, stock, timestep)
+        om3 = OptionModel(V3, K3, T3, r, vol, stock, timestep)
+        # model the portfolio
+        pm = OptionsPortfolio([(om1, "LONG"), (om2, "SHORT"), (om3, "LONG")])
+        pm.model(t, st)
+        # plot the delta
+        ax[1].set_title("Delta")
+        ax[1].plot(pm.t, pm.delta)
+        # plot the gamma
+        ax[2].set_title("Gamma")
+        ax[2].plot(pm.t, pm.gamma)
         plt.show()
 
     def demonstrateparity():
@@ -184,7 +248,8 @@ if __name__ == "__main__":
         plt.legend()
         plt.show()
 
-    #demonstratedelta()
-    demonstrateparity()
+    # demonstratedelta()
+    # demonstrateparity()
+    graphgreeks()
 
 

@@ -8,6 +8,8 @@ from scipy.stats import norm
 
 class BlackScholes(object):
 
+    zero = 0.000000000001
+
     """
     
     compute solution for call price using black scholes solution
@@ -74,3 +76,82 @@ class BlackScholes(object):
         discountedK = K * m.exp(-r * tau)
         P = C + discountedK - S
         return P
+
+    """
+    
+    for a call, we have the following closed form solution for delta:
+    
+    dC/dS = N(d1)
+
+    where
+    
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+
+    """
+    @staticmethod
+    def computecalldelta(S, K, tau, r, sigma):
+
+        # if tau has gone negative that means we are at expiration (float pt)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        delta = norm.cdf(d1)
+        return delta
+    
+    @staticmethod
+    def __calldeltaexpiry(S, K):
+
+        if (S > K): return 1
+        elif (S == K): return 0.5
+        else: return 0
+    
+    """
+    
+    for a put, we have the following closed form solution for delta:
+    
+    dP/dS = -N(-d1) = N(d1) - 1
+
+    where
+    
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+
+    """
+    @staticmethod
+    def computeputdelta(S, K, tau, r, sigma):
+
+        # if tau has gone negative that means we are at expiration (float pt)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        delta = norm.cdf(d1) - 1
+        return delta
+    
+    @staticmethod
+    def __putdeltaexpiry(S, K):
+
+        if (S < K): return -1
+        elif (S == K): return -0.5
+        else: return 0
+
+    """
+    
+    for a call/put, we have the following closed form solution for gamma:
+    
+    d^2C/dS^2 = (1 / (S * sigma * sqrt(tau))) * N'(d1)
+
+    where
+    
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+    
+    """
+    @staticmethod
+    def computegamma(S, K, tau, r, sigma):
+
+        # if tau has gone negative that means we are at expiration (float pt)
+        if (tau <= 0): tau = BlackScholes.zero
+        factor = 1 / (S * sigma * m.sqrt(tau))
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        G = factor * norm.pdf(d1)        
+        return G
+
