@@ -137,7 +137,7 @@ class BlackScholes(object):
     
     for a call/put, we have the following closed form solution for gamma:
     
-    d^2C/dS^2 = (1 / (S * sigma * sqrt(tau))) * N'(d1)
+    d^2V/dS^2 = (1 / (S * sigma * sqrt(tau))) * N'(d1)
 
     where
     
@@ -154,4 +154,124 @@ class BlackScholes(object):
         d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
         G = factor * norm.pdf(d1)        
         return G
+
+    """
+    
+    for a call/put, we have the following closed form solution for gamma:
+
+    dV/d(sigma) = S * N'(d1) * sqrt(tau)
+
+    where
+    
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+
+    """
+    @staticmethod
+    def computevega(S, K, tau, r, sigma):
+
+        # if tau has gone negative that means we are at expiration (float pt)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        # now compute the vega
+        V = S * norm.pdf(d1) * m.sqrt(tau)
+        return V
+
+    """
+
+    for a call, we have the following closed form solution for theta:
+    
+    dC/dt = -r * K * exp(-r * tau) * N(d2) 
+            - (sigma * S) / (2 * sqrt(tau)) * N'(d1)
+
+    where
+
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+    d2 = d1 - sigma * sqrt(tau)
+    
+    """
+    @staticmethod
+    def computecalltheta(S, K, tau, r, sigma):
+
+        # need to ensure tau does not reach 0 or below (float pt in python)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        d2 = d1 - (sigma * m.sqrt(tau))
+        # now compute the theta
+        n, p = norm.cdf(d2), norm.pdf(d1)
+        T1 = -r * K * m.exp(-r * tau) * n
+        T2 = ((sigma * S) / (2 * m.sqrt(tau))) * p
+        T = T1 - T2
+        return T
+    
+    """
+
+    for a put, we have the following closed form solution for theta:
+    
+    dC/dt = r * K * exp(-r * tau) * N(-d2) 
+            - (sigma * S) / (2 * sqrt(tau)) * N'(d1)
+
+    where
+
+    d1 = (1 / (sigma * sqrt(tau))) * (ln(S/K) + (r + sigma^2 / 2) * tau)
+    d2 = d1 - sigma * sqrt(tau)
+    
+    """
+    @staticmethod
+    def computeputtheta(S, K, tau, r, sigma):
+
+        # need to ensure tau does not reach 0 or below (float pt in python)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        d2 = d1 - (sigma * m.sqrt(tau))
+        # now compute the theta
+        n, p = norm.cdf(-d2), norm.pdf(d1)
+        T1 = r * K * m.exp(-r * tau) * n
+        T2 = ((sigma * S) / (2 * m.sqrt(tau))) * p
+        T = T1 - T2
+        return T
+    
+    """
+    
+    for a call, we have the following closed form solution for rho:
+    
+    dC/dr = K * tau * exp(-r * tau) * N(d2) 
+    
+    """
+    @staticmethod
+    def computecallrho(S, K, tau, r, sigma):
+
+        # need to ensure tau does not reach 0 or below (float pt in python)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        d2 = d1 - (sigma * m.sqrt(tau))
+        # now compute the theta
+        N2 = norm.cdf(d2)
+        R = K * tau * m.exp(-r * tau) * N2
+        return R
+
+    """
+    
+    for a put, we have the following closed form solution for rho:
+    
+    dC/dr = -K * tau * exp(-r * tau) * N(-d2) 
+    
+    """
+    @staticmethod
+    def computeputrho(S, K, tau, r, sigma):
+
+        # need to ensure tau does not reach 0 or below (float pt in python)
+        if (tau <= 0): tau = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(tau))
+        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
+        d2 = d1 - (sigma * m.sqrt(tau))
+        # now compute the theta
+        N2 = norm.cdf(-d2)
+        R = -K * tau * m.exp(-r * tau) * N2
+        return R
+
+
 
