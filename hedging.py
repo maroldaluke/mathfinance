@@ -15,6 +15,123 @@ goal:
 
 """
 
+class HedgingPortfolio(object):
+
+
+    def __init__(self, underlying, portfolio):
+
+        # the portfolio in which we would want to hedge
+        self.options = portfolio
+        self.stock = underlying
+        self.shares = 0
+        self.bankpos = 0
+        self.rebalanceinterval = 50
+        self.t = []
+        self.ht = []
+        self.underlying = []
+        self.bank = []
+        self.error = []
+
+    def model(self):
+
+        # model both the underlying stock and options portfolio
+        self.stock.model()
+        self.options.model(self.stock.t, self.stock.st)
+
+    """
+    
+    the following steps detail how we can accomplish a delta hedge:
+
+    say we sell an options portfolio that has value X_t:
+
+    then to hedge this sale at time t, we compute the delta of the portfolio,
+    denoted by D_t. this will be the number of shares of the underlying that
+    we hold at time t
+
+    the remaining capital from the sale will be invested (or borrowed) in bank
+    
+    in summary, to hedge the sale at time t:
+
+    - purchase D_t shares of the underlying
+    - invest X_t - D_t * S_t in the bank
+
+    (note that if X_t - D_t * S_t < 0, we are borrowing from the bank)
+    
+    """
+    def deltahedge(self):
+
+        # at each rebalance interval, compute portfolio delta
+        duration = len(self.stock.t)
+        for i in range(duration):
+            # only recompute hedge if we are at proper interval
+            if i % self.rebalanceinterval == 0: self.__updatehedge(i)
+            # update the underlying and bank values
+            self.__updatehedgeportfolio(i)
+
+    """
+    
+    this method dynamically updates the option hedging portfolio. we recompute
+    the delta and adjust the underlying and bank positions at each interval
+
+    """
+    def __updatehedge(self, i):
+
+        delta = self.options.delta[i]
+        self.shares = delta
+        self.bankpos = self.options.price[i] - self.shares * self.stock.st[i]
+
+    """
+    
+    regardless of the dynamic hedge interval, we must always still compute the
+    present value of our underlying and bank positions.
+
+    to adjust the underlying value, we can just use the new value of underlying
+    for bank position, we must account for the continuous interest earned
+    
+    """
+    def __updatehedgeportfolio(self, i):
+
+        # update the underlying
+        underlying = self.shares * self.stock.st[i]
+        # update the bank pos by the interest earned over the timestep
+        bank = self.bankpos * m.exp(self.stock.sigma * self.stock.timestep)
+        value = underlying + bank
+        # now compute the difference in portfolio and hedging portfolio
+        difference = self.options.price[i] - value
+        # append all of the new values
+        self.t.append(self.stock.t[i])
+        self.ht.append(value)
+        self.underlying.append(underlying)
+        self.bank.append(bank)
+        self.error.append(difference)
+
+    def graphoptions(self):
+
+        f, ax = plt.subplots(3, 2)
+        # model and plot
+        self.model()
+        self.deltahedge()
+        # plot the stock
+        ax[0, 0].set_title("Stock")
+        ax[0, 0].plot(self.stock.t, self.stock.st)
+        # plot the error between portfolio and hedge
+        ax[0, 1].set_title("Error")
+        ax[0, 1].plot(self.t, self.error)
+        # plot the options portfolio
+        ax[1, 0].set_title("Portfolio")
+        ax[1, 0].plot(self.options.t, self.options.price)
+        # plot the hedging portfolio
+        ax[1, 1].set_title("Hedging Portfolio")
+        ax[1, 1].plot(self.t, self.ht)
+        # plot the underlying pos
+        ax[2, 0].set_title("Hedge - Underlying Position")
+        ax[2, 0].plot(self.t, self.underlying)
+        # plot the bank pos
+        ax[2, 1].set_title("Hedge - Bank Position")
+        ax[2, 1].plot(self.t, self.bank)
+        f.tight_layout(pad=0.25)
+        plt.show()
+
 class OptionsPortfolio(object):
 
     def __init__(self, securities):
@@ -310,8 +427,29 @@ if __name__ == "__main__":
         plt.legend()
         plt.show()
 
+    def plotportfolio():
+
+        # options parameters
+        K1, K2, K3 = 50, 60, 50
+        T1, T2, T3 = 2, 2, 2
+        V1, V2, V3 = OptionModel.CALL, OptionModel.CALL, OptionModel.PUT
+
+        stock = StockModel(N, S0, r, vol, timestep)
+        # now build our options models
+        om1 = OptionModel(V1, K1, T1, r, vol, stock, timestep)
+        om2 = OptionModel(V2, K2, T2, r, vol, stock, timestep)
+        om3 = OptionModel(V3, K3, T3, r, vol, stock, timestep)
+        # model the portfolio
+        pm = OptionsPortfolio([(om1, "LONG"), (om2, "SHORT"), (om3, "LONG")])
+
+        # now creating the hedging portfolio
+        hedge = HedgingPortfolio(stock, pm)
+        hedge.graphoptions()
+
     # demonstratedelta()
     # demonstrateparity()
-    graphgreeks()
+    # graphgreeks()
+    plotportfolio()
+
 
 
