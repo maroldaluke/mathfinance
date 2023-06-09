@@ -440,7 +440,9 @@ if __name__ == "__main__":
         om2 = OptionModel(V2, K2, T2, r, vol, stock, timestep)
         om3 = OptionModel(V3, K3, T3, r, vol, stock, timestep)
         # model the portfolio
-        pm = OptionsPortfolio([(om1, "LONG"), (om2, "SHORT"), (om3, "LONG")])
+        pm = OptionsPortfolio([(om1, "LONG"), 
+                               (om2, "SHORT"), 
+                               (om3, "LONG")])
 
         # now creating the hedging portfolio
         hedge = HedgingPortfolio(stock, pm)
@@ -448,8 +450,8 @@ if __name__ == "__main__":
 
     # demonstratedelta()
     # demonstrateparity()
-    # graphgreeks()
-    plotportfolio()
+    graphgreeks()
+    # plotportfolio()
 
 
 

@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
 import numpy as np
 import math as m
+import csv as csv
 from scipy.stats import norm
 
 class ImpliedVolatility(object):
@@ -85,6 +86,18 @@ class ImpliedVolatility(object):
         tau = T - t
         sigma = m.sqrt((2 * m.pi) / tau) * (C / S)
         return sigma
+    
+    @staticmethod
+    def volatilitysurface(path):
+        
+        """
+        IN PROGRESS
+        """
+
+        # graph implied vol versus: strike and time to maturtiy
+        prices = ImpliedVolatility.__csvtolist(path)
+        # ax = plt.axes(projection='3d')
+        # ax.plot3D(rw.x, rw.y, rw.z)
 
     """
     
@@ -176,6 +189,23 @@ class ImpliedVolatility(object):
         # now with newton's method
         newsig = sigma - difference / vega
         return newsig 
+    
+    def __csvtolist(file):
+
+        with open(file, newline= '') as csvfile:
+            reader = csv.reader(csvfile)
+            rawData = list(reader)
+        cleaned = ImpliedVolatility.__cleanrawdata(rawData)
+        return cleaned
+
+    def __cleanrawdata(rawdata):
+
+        cleaned = []
+        for entry in rawdata[1:len(rawdata)-1]:
+            stock, typ, price = entry[1], entry[2], entry[7]
+            combined = [stock, typ, price]
+            if typ == "Call": cleaned.append(combined)
+        return cleaned
 
 if __name__ == "__main__":
 
@@ -186,8 +216,13 @@ if __name__ == "__main__":
     r = 0.05
     sigma = 0.11435117637
 
+    """
     C = ImpliedVolatility.computeprice(S, K, T, t, r, sigma)
     print("Call Price: ", C)
     iv = ImpliedVolatility()
     newsig = iv.computevolfast(C, S, K, T, t, r)
     print("Implied Volatility: ", newsig)
+    """
+
+    path = 'stock-options-volume-leaders-06-08-2023.csv'
+    ImpliedVolatility.volatilitysurface(path)
