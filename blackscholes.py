@@ -274,4 +274,3 @@ class BlackScholes(object):
         return R
 
 
-

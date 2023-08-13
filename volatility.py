@@ -216,13 +216,8 @@ if __name__ == "__main__":
     r = 0.05
     sigma = 0.11435117637
 
-    """
     C = ImpliedVolatility.computeprice(S, K, T, t, r, sigma)
     print("Call Price: ", C)
     iv = ImpliedVolatility()
     newsig = iv.computevolfast(C, S, K, T, t, r)
     print("Implied Volatility: ", newsig)
-    """
-
-    path = 'stock-options-volume-leaders-06-08-2023.csv'
-    ImpliedVolatility.volatilitysurface(path)

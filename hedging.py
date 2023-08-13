@@ -409,7 +409,7 @@ if __name__ == "__main__":
     def demonstratedelta():
 
         # option parameters
-        typ = OptionModel.PUT
+        typ = OptionModel.CALL
         T = 2
 
         ax = plt.axes()
@@ -418,12 +418,32 @@ if __name__ == "__main__":
         (t, st) = stock.model()
         ax.plot(t, st)
         # observe the differences between ITM and OTM calls
-        # strikes = [50, 55, 60, 65, 70, 75, 80]
-        strikes = [20, 25, 30, 35, 40, 45, 50]
+        strikes = [50, 55, 60, 65, 70, 75, 80]
+        # strikes = [20, 25, 30, 35, 40, 45, 50]
         for strike in strikes:
             om = OptionModel(typ, strike, T, r, vol, stock, timestep)
             om.model(t, st)
             ax.plot(om.t, om.price, label = "Strike: " + str(strike))
+        plt.legend()
+        plt.show()
+
+    def demonstratetheta():
+
+        # option parameters
+        typ = OptionModel.CALL
+        T = 2
+
+        ax = plt.axes()
+        stock = StockModel(N, S0, r, vol, timestep)
+        # first model the underlying
+        (t, st) = stock.model()
+        # observe the differences between ITM and OTM calls
+        strikes = [50, 60, 70, 80, 90, 100]
+        # strikes = [20, 25, 30, 35, 40, 45, 50]
+        for strike in strikes:
+            om = OptionModel(typ, strike, T, r, vol, stock, timestep)
+            om.model(t, st)
+            ax.plot(om.t, om.theta, label = "Strike: " + str(strike))
         plt.legend()
         plt.show()
 
@@ -452,6 +472,8 @@ if __name__ == "__main__":
     # demonstrateparity()
     graphgreeks()
     # plotportfolio()
+    # demonstratetheta()
+
 
 
 
