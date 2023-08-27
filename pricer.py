@@ -131,31 +131,43 @@ class Pricer(object):
     """
 
     @staticmethod
-    def plot(strategy, plots = ['payoff', 'price', 'delta', 'vega']):
+    def plot(strategy, plots = ['payoff', 'price', 'vega']):
+
+        vols = [0.08, 0.16, 0.32, 0.64]
+        vol_titles = ['8 vol', '16 vol', '32 vol', '64 vol']
 
         numplots = len(plots)
 
         f, ax = plt.subplots(numplots)
-        f.set_figheight(2 * numplots)
-        f.set_figwidth(7)
+        f.set_figheight(8)
+        f.set_figwidth(10)
 
         for i in range(numplots):
 
             plottype = plots[i]
-            if plottype == "payoff": x, y = Pricer.computepayoff(strategy)
-            elif plottype == "price": x, y = Pricer.computeprice(strategy)
-            elif plottype == "delta": x, y = Pricer.computegreek(strategy, "delta")
-            elif plottype == "vega": x, y = Pricer.computegreek(strategy, "vega")
-            elif plottype == "theta": x, y = Pricer.computegreek(strategy, "theta")
-            elif plottype == "rho": x, y = Pricer.computegreek(strategy, "rho")
+            if plottype == "payoff": data = Pricer.computepayoff(strategy)
+            elif plottype == "price": data = Pricer.computeprice(strategy, vols)
+            elif plottype == "delta": data = Pricer.computegreek(strategy, vols, "delta")
+            elif plottype == "vega": data = Pricer.computegreek(strategy, vols, "vega")
+            elif plottype == "theta": data = Pricer.computegreek(strategy, vols, "theta")
+            elif plottype == "rho": data = Pricer.computegreek(strategy, vols, "rho")
 
             if numplots == 1: 
-                ax.plot(x, y, label = plottype)
-                ax.legend()
+                for j in range(len(data)): 
+                    x, y = data[j]
+                    if plottype == 'payoff': label = plottype
+                    else: label = plottype + ' - ' + vol_titles[j]
+                    ax.plot(x, y, label = label)
+                ax.legend(loc='upper right')
             else: 
-                ax[i].plot(x, y, label = plottype)
-                ax[i].legend()
+                for j in range(len(data)): 
+                    x, y = data[j]
+                    if plottype == 'payoff': label = plottype
+                    else: label = plottype + ' - ' + vol_titles[j]
+                    ax[i].plot(x, y, label = label)
+                ax[i].legend(loc='upper right')
 
+        f.tight_layout(pad=0.5)
         plt.show()
 
     @staticmethod
@@ -173,54 +185,60 @@ class Pricer(object):
                 elif o.side == "Short": value -= p
             values.append(value)
 
-        return (spots, values)
+        return [(spots, values)]
 
     @staticmethod
-    def computeprice(strategy):
+    def computeprice(strategy, vols):
 
-        values = []
+        res = []
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
-        for S in spots:
-            value = 0
-            for o in strategy:
-                p = BlackScholes.price(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
-                if o.side == "Long": value += p
-                elif o.side == "Short": value -= p
-            values.append(value)
+        for vol in vols:
+            values = []
+            for S in spots:
+                value = 0
+                for o in strategy:
+                    p = BlackScholes.price(o.typ, S, o.K, o.T, o.r, o.q, vol)
+                    if o.side == "Long": value += p
+                    elif o.side == "Short": value -= p
+                values.append(value)
+            res.append((spots, values))
 
-        return (spots, values)
+        return res
     
     @staticmethod
-    def computegreek(strategy, greek):
+    def computegreek(strategy, vols, greek):
 
-        values = []
+        res = []
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
-        for S in spots:
-            value = 0
-            for o in strategy:
-                g = Pricer.__getgreek(S, o, greek)
-                if o.side == "Long": value += g
-                elif o.side == "Short": value -= g
-            values.append(value)
+        for vol in vols:
+            values = []
+            for S in spots:
+                value = 0
+                for o in strategy:
+                    g = Pricer.__getgreek(S, o, vol, greek)
+                    if o.side == "Long": value += g
+                    elif o.side == "Short": value -= g
+                values.append(value)
+            res.append((spots, values))
 
-        return (spots, values)
+        return res
     
     @staticmethod
-    def __getgreek(S, o, greek):
+    def __getgreek(S, o, vol, greek):
 
         g = 0
         if greek == "delta":
-            g = BlackScholes.delta(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
+            g = BlackScholes.delta(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "vega":
-            g = BlackScholes.vega(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
+            g = BlackScholes.vega(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "theta":
-            g = BlackScholes.theta(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
+            g = BlackScholes.theta(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "rho":
-            g = BlackScholes.rho(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
+            g = BlackScholes.rho(o.typ, S, o.K, o.T, o.r, o.q, vol)
 
         return g
 
@@ -239,8 +257,8 @@ if __name__ == "__main__":
     q = 0.01
     sigma = 0.15
 
-    C = Option("C", "Long", 80, T, r, q, sigma)
-    P = Option("C", "Short", 120, T, r, q, sigma)
+    C = Option("C", "Long", 90, T, r, q, sigma)
+    P = Option("C", "Short", 110, T, r, q, sigma)
 
     strategy = [C, P]
     Pricer.plot(strategy)
