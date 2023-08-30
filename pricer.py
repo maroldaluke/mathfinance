@@ -131,10 +131,14 @@ class Pricer(object):
     """
 
     @staticmethod
-    def plot(strategy, plots = ['payoff', 'price', 'vega']):
+    def plot(strategy, plots = ['payoff', 'price', 'delta', 'vega'], diffvols = True):
 
-        vols = [0.08, 0.16, 0.32, 0.64]
-        vol_titles = ['8 vol', '16 vol', '32 vol', '64 vol']
+        if diffvols:
+            vols = [0.08, 0.16, 0.32, 0.64]
+            vol_titles = [' - 8 vol', ' - 16 vol', ' - 32 vol', ' - 64 vol']
+        else:
+            vols = []
+            vol_titles = ['']
 
         numplots = len(plots)
 
@@ -156,14 +160,14 @@ class Pricer(object):
                 for j in range(len(data)): 
                     x, y = data[j]
                     if plottype == 'payoff': label = plottype
-                    else: label = plottype + ' - ' + vol_titles[j]
+                    else: label = plottype + vol_titles[j]
                     ax.plot(x, y, label = label)
                 ax.legend(loc='upper right')
             else: 
                 for j in range(len(data)): 
                     x, y = data[j]
                     if plottype == 'payoff': label = plottype
-                    else: label = plottype + ' - ' + vol_titles[j]
+                    else: label = plottype + vol_titles[j]
                     ax[i].plot(x, y, label = label)
                 ax[i].legend(loc='upper right')
 
@@ -194,12 +198,23 @@ class Pricer(object):
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
-        for vol in vols:
+        if len(vols) > 0:
+            for vol in vols:
+                values = []
+                for S in spots:
+                    value = 0
+                    for o in strategy:
+                        p = BlackScholes.price(o.typ, S, o.K, o.T, o.r, o.q, vol)
+                        if o.side == "Long": value += p
+                        elif o.side == "Short": value -= p
+                    values.append(value)
+                res.append((spots, values))
+        else:
             values = []
             for S in spots:
                 value = 0
                 for o in strategy:
-                    p = BlackScholes.price(o.typ, S, o.K, o.T, o.r, o.q, vol)
+                    p = BlackScholes.price(o.typ, S, o.K, o.T, o.r, o.q, o.sigma)
                     if o.side == "Long": value += p
                     elif o.side == "Short": value -= p
                 values.append(value)
@@ -214,12 +229,23 @@ class Pricer(object):
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
-        for vol in vols:
+        if len(vols) > 1:
+            for vol in vols:
+                values = []
+                for S in spots:
+                    value = 0
+                    for o in strategy:
+                        g = Pricer.__getgreek(S, o, vol, greek)
+                        if o.side == "Long": value += g
+                        elif o.side == "Short": value -= g
+                    values.append(value)
+                res.append((spots, values))
+        else:
             values = []
             for S in spots:
                 value = 0
                 for o in strategy:
-                    g = Pricer.__getgreek(S, o, vol, greek)
+                    g = Pricer.__getgreek(S, o, o.sigma, greek)
                     if o.side == "Long": value += g
                     elif o.side == "Short": value -= g
                 values.append(value)
