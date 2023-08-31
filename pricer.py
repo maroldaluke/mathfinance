@@ -100,15 +100,39 @@ class BlackScholes(object):
     ### Second Order Greeks ###
 
     @staticmethod
-    def computegamma(S, K, tau, r, sigma):
+    def gamma(typ, S, K, T, r, q, sigma):
 
-        # if tau has gone negative that means we are at expiration (float pt)
-        if (tau <= 0): tau = BlackScholes.zero
-        factor = 1 / (S * sigma * m.sqrt(tau))
-        coef = 1 / (sigma * m.sqrt(tau))
-        d1 = coef * (m.log(S / K) + (r + (sigma ** 2 / 2)) * tau)
-        G = factor * norm.pdf(d1)        
-        return G
+        if (T <= 0): T = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(T))
+        d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
+        factor = 1 / (S * sigma * m.sqrt(T))
+        gamma = m.exp(-q * T) * factor * norm.pdf(d1)    
+
+        return gamma
+    
+    @staticmethod
+    def vanna(typ, S, K, T, r, q, sigma):
+
+        if (T <= 0): T = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(T))
+        d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
+        d2 = d1 - (sigma * m.sqrt(T))
+        vanna = (-m.exp(-q * T) * norm.pdf(d1) * d2) / sigma
+
+        return vanna
+    
+    @staticmethod
+    def volga(typ, S, K, T, r, q, sigma):
+
+        if (T <= 0): T = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(T))
+        d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
+        d2 = d1 - (sigma * m.sqrt(T))
+        factor = (m.sqrt(T) * d1 * d2) / sigma
+        volga = S * m.exp(-q * T) * norm.pdf(d1) * factor
+        
+        return volga
+
     
 class Option(object):
 
@@ -131,7 +155,7 @@ class Pricer(object):
     """
 
     @staticmethod
-    def plot(strategy, plots = ['payoff', 'price', 'delta', 'vega'], diffvols = True):
+    def plot(strategy, plots = ['payoff', 'price', 'delta'], diffvols = True):
 
         if diffvols:
             vols = [0.08, 0.16, 0.32, 0.64]
@@ -151,10 +175,15 @@ class Pricer(object):
             plottype = plots[i]
             if plottype == "payoff": data = Pricer.computepayoff(strategy)
             elif plottype == "price": data = Pricer.computeprice(strategy, vols)
+            # first order greeks
             elif plottype == "delta": data = Pricer.computegreek(strategy, vols, "delta")
             elif plottype == "vega": data = Pricer.computegreek(strategy, vols, "vega")
             elif plottype == "theta": data = Pricer.computegreek(strategy, vols, "theta")
             elif plottype == "rho": data = Pricer.computegreek(strategy, vols, "rho")
+            # second order greeks
+            elif plottype == "gamma": data = Pricer.computegreek(strategy, vols, "gamma")
+            elif plottype == "vanna": data = Pricer.computegreek(strategy, vols, "vanna")
+            elif plottype == "volga": data = Pricer.computegreek(strategy, vols, "volga")
 
             if numplots == 1: 
                 for j in range(len(data)): 
@@ -265,6 +294,12 @@ class Pricer(object):
             g = BlackScholes.theta(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "rho":
             g = BlackScholes.rho(o.typ, S, o.K, o.T, o.r, o.q, vol)
+        elif greek == "gamma":
+            g = BlackScholes.gamma(o.typ, S, o.K, o.T, o.r, o.q, vol)
+        elif greek == "vanna":
+            g = BlackScholes.vanna(o.typ, S, o.K, o.T, o.r, o.q, vol)
+        elif greek == "volga":
+            g = BlackScholes.volga(o.typ, S, o.K, o.T, o.r, o.q, vol)
 
         return g
 
@@ -286,5 +321,9 @@ if __name__ == "__main__":
     C = Option("C", "Long", 90, T, r, q, sigma)
     P = Option("C", "Short", 110, T, r, q, sigma)
 
-    strategy = [C, P]
-    Pricer.plot(strategy)
+    downside_put = Option("P", "Short", 90, T, r, q, 0.40)
+    upside_call = Option("C", "Long", 110, T, r, q, 0.10)
+
+    strategy = [C]
+    # riskreversal = [downside_put, upside_call]
+    Pricer.plot(strategy, plots = ['payoff', 'price', 'vanna', 'volga'], diffvols = True)
