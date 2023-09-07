@@ -133,6 +133,21 @@ class BlackScholes(object):
         
         return volga
 
+    @staticmethod
+    def charm(typ, S, K, T, r, q, sigma):
+
+        if (T <= 0): T = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(T))
+        d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
+        d2 = d1 - (sigma * m.sqrt(T))
+        num = m.exp(-q * T) * norm.pdf(d1) * 2 * (r - q) * T - d2 * sigma * m.sqrt(T)
+        denom = 2 * T * sigma * m.sqrt(T)
+        term2 = num / denom
+        if typ == "C": charm = q * m.exp(-q * T) * norm.cdf(d1) - term2
+        elif typ == "P": -q * m.exp(-q * T) * norm.cdf(-d1) - term2
+        else: charm = Error()
+
+        return charm
     
 class Option(object):
 
@@ -184,6 +199,7 @@ class Pricer(object):
             elif plottype == "gamma": data = Pricer.computegreek(strategy, vols, "gamma")
             elif plottype == "vanna": data = Pricer.computegreek(strategy, vols, "vanna")
             elif plottype == "volga": data = Pricer.computegreek(strategy, vols, "volga")
+            elif plottype == "charm": data = Pricer.computegreek(strategy, vols, "charm")
 
             if numplots == 1: 
                 for j in range(len(data)): 
@@ -300,6 +316,8 @@ class Pricer(object):
             g = BlackScholes.vanna(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "volga":
             g = BlackScholes.volga(o.typ, S, o.K, o.T, o.r, o.q, vol)
+        elif greek == "charm":
+            g = BlackScholes.charm(o.typ, S, o.K, o.T, o.r, o.q, vol)
 
         return g
 
@@ -324,6 +342,6 @@ if __name__ == "__main__":
     downside_put = Option("P", "Short", 90, T, r, q, 0.40)
     upside_call = Option("C", "Long", 110, T, r, q, 0.10)
 
-    strategy = [C]
-    # riskreversal = [downside_put, upside_call]
-    Pricer.plot(strategy, plots = ['payoff', 'price', 'vanna', 'volga'], diffvols = True)
+    strategy = [C, P]
+    riskreversal = [downside_put, upside_call]
+    Pricer.plot(riskreversal, plots = ['payoff', 'price', 'gamma', 'theta'], diffvols = False)
