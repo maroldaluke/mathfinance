@@ -148,6 +148,20 @@ class BlackScholes(object):
         else: charm = Error()
 
         return charm
+
+    @staticmethod
+    def veta(typ, S, K, T, r, q, sigma):
+
+        if (T <= 0): T = BlackScholes.zero
+        coef = 1 / (sigma * m.sqrt(T))
+        d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
+        d2 = d1 - (sigma * m.sqrt(T))
+        term1 = ((r - q) * d1) / (sigma * m.sqrt(T))
+        term2 = (1 + d1 * d2) / (2 * T)
+        coeff = q + term1 - term2
+        veta = -S * m.exp(-q * T) * norm.pdf(d1) * m.sqrt(T) * coeff
+
+        return veta
     
 class Option(object):
 
@@ -200,6 +214,7 @@ class Pricer(object):
             elif plottype == "vanna": data = Pricer.computegreek(strategy, vols, "vanna")
             elif plottype == "volga": data = Pricer.computegreek(strategy, vols, "volga")
             elif plottype == "charm": data = Pricer.computegreek(strategy, vols, "charm")
+            elif plottype == "veta": data = Pricer.computegreek(strategy, vols, "veta")
 
             if numplots == 1: 
                 for j in range(len(data)): 
@@ -318,6 +333,8 @@ class Pricer(object):
             g = BlackScholes.volga(o.typ, S, o.K, o.T, o.r, o.q, vol)
         elif greek == "charm":
             g = BlackScholes.charm(o.typ, S, o.K, o.T, o.r, o.q, vol)
+        elif greek == "veta":
+            g = BlackScholes.veta(o.typ, S, o.K, o.T, o.r, o.q, vol)
 
         return g
 
@@ -342,6 +359,11 @@ if __name__ == "__main__":
     downside_put = Option("P", "Short", 90, T, r, q, 0.40)
     upside_call = Option("C", "Long", 110, T, r, q, 0.10)
 
-    strategy = [C, P]
+    shortdated_call = Option("C", "Short", 100, 0.25, r, q, 0.10)
+    longdated_call = Option("C", "Long", 100, 1, r, q, 0.10)
+
+    strategy = [C]
     riskreversal = [downside_put, upside_call]
-    Pricer.plot(riskreversal, plots = ['payoff', 'price', 'gamma', 'theta'], diffvols = False)
+    calendarspread = [shortdated_call, longdated_call]
+
+    Pricer.plot(strategy, plots = ['payoff', 'price', 'gamma', 'veta'], diffvols = True)
