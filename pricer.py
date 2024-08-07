@@ -68,7 +68,7 @@ class BlackScholes(object):
 
     @staticmethod
     def theta(typ, S, K, T, r, q, sigma):
-
+        
         if (T <= 0): T = BlackScholes.zero
         coef = 1 / (sigma * m.sqrt(T))
         d1 = coef * (m.log(S / K) + (r - q + (sigma ** 2 / 2)) * T)
@@ -184,14 +184,27 @@ class Pricer(object):
     """
 
     @staticmethod
-    def plot(strategy, plots = ['payoff', 'price', 'delta'], diffvols = True):
+    def plot(strategy, plots = ['payoff', 'price', 'delta'], diffvols = True, diffmats = False):
+        
+        # if both modes enabled default to diffmats
+        if diffvols and diffmats:
+            diffvols, diffmats = False, True
 
         if diffvols:
             vols = [0.08, 0.16, 0.32, 0.64]
             vol_titles = [' - 8 vol', ' - 16 vol', ' - 32 vol', ' - 64 vol']
-        else:
+            maturities = []
+            mat_titles = ['']
+        elif diffmats:
+            maturities = [30/252, 90/252, 0.5, 1]
+            mat_titles = [' - 1 month', ' - 3 month', ' - 6 month', ' - 1 year']
             vols = []
             vol_titles = ['']
+        else:
+            vols = []
+            maturities = []
+            vol_titles = ['']
+            mat_titles = ['']
 
         numplots = len(plots)
 
@@ -203,31 +216,41 @@ class Pricer(object):
 
             plottype = plots[i]
             if plottype == "payoff": data = Pricer.computepayoff(strategy)
-            elif plottype == "price": data = Pricer.computeprice(strategy, vols)
+            elif plottype == "price": data = Pricer.computeprice(strategy, vols, maturities)
             # first order greeks
-            elif plottype == "delta": data = Pricer.computegreek(strategy, vols, "delta")
-            elif plottype == "vega": data = Pricer.computegreek(strategy, vols, "vega")
-            elif plottype == "theta": data = Pricer.computegreek(strategy, vols, "theta")
-            elif plottype == "rho": data = Pricer.computegreek(strategy, vols, "rho")
+            elif plottype == "delta": data = Pricer.computegreek(strategy, vols, maturities, "delta")
+            elif plottype == "vega": data = Pricer.computegreek(strategy, vols, maturities, "vega")
+            elif plottype == "theta": data = Pricer.computegreek(strategy, vols, maturities, "theta")
+            elif plottype == "rho": data = Pricer.computegreek(strategy, vols, maturities, "rho")
             # second order greeks
-            elif plottype == "gamma": data = Pricer.computegreek(strategy, vols, "gamma")
-            elif plottype == "vanna": data = Pricer.computegreek(strategy, vols, "vanna")
-            elif plottype == "volga": data = Pricer.computegreek(strategy, vols, "volga")
-            elif plottype == "charm": data = Pricer.computegreek(strategy, vols, "charm")
-            elif plottype == "veta": data = Pricer.computegreek(strategy, vols, "veta")
+            elif plottype == "gamma": data = Pricer.computegreek(strategy, vols, maturities, "gamma")
+            elif plottype == "vanna": data = Pricer.computegreek(strategy, vols, maturities, "vanna")
+            elif plottype == "volga": data = Pricer.computegreek(strategy, vols, maturities, "volga")
+            elif plottype == "charm": data = Pricer.computegreek(strategy, vols, maturities, "charm")
+            elif plottype == "veta": data = Pricer.computegreek(strategy, vols, maturities, "veta")
 
             if numplots == 1: 
                 for j in range(len(data)): 
                     x, y = data[j]
+                    
                     if plottype == 'payoff': label = plottype
-                    else: label = plottype + vol_titles[j]
+                    else: 
+                        if diffvols: label = plottype + vol_titles[j]
+                        elif diffmats: label = plottype + mat_titles[j]
+                        else: label = plottype
+                        
                     ax.plot(x, y, label = label)
                 ax.legend(loc='upper right')
             else: 
                 for j in range(len(data)): 
                     x, y = data[j]
+                    
                     if plottype == 'payoff': label = plottype
-                    else: label = plottype + vol_titles[j]
+                    else: 
+                        if diffvols: label = plottype + vol_titles[j]
+                        elif diffmats: label = plottype + mat_titles[j]
+                        else: label = plottype
+                        
                     ax[i].plot(x, y, label = label)
                 ax[i].legend(loc='upper right')
 
@@ -252,12 +275,13 @@ class Pricer(object):
         return [(spots, values)]
 
     @staticmethod
-    def computeprice(strategy, vols):
+    def computeprice(strategy, vols, maturities):
 
         res = []
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
+        # computing price across various vol levels
         if len(vols) > 0:
             for vol in vols:
                 values = []
@@ -269,6 +293,21 @@ class Pricer(object):
                         elif o.side == "Short": value -= p
                     values.append(value)
                 res.append((spots, values))
+                
+        # computing price across various maturities
+        elif len(maturities) > 0:
+            for mat in maturities:
+                values = []
+                for S in spots:
+                    value = 0
+                    for o in strategy:
+                        p = BlackScholes.price(o.typ, S, o.K, mat, o.r, o.q, o.sigma)
+                        if o.side == "Long": value += p
+                        elif o.side == "Short": value -= p
+                    values.append(value)
+                res.append((spots, values))
+        
+        # computing price across specified vol and maturity
         else:
             values = []
             for S in spots:
@@ -283,29 +322,45 @@ class Pricer(object):
         return res
     
     @staticmethod
-    def computegreek(strategy, vols, greek):
+    def computegreek(strategy, vols, maturities, greek):
 
         res = []
         maxspot = 2 * Pricer.__maxstrike(strategy) + 1
         spots = [ s for s in range(1, maxspot) ]
 
-        if len(vols) > 1:
+        # computing greek across various vol levels
+        if len(vols) > 0:
             for vol in vols:
                 values = []
                 for S in spots:
                     value = 0
                     for o in strategy:
-                        g = Pricer.__getgreek(S, o, vol, greek)
+                        g = Pricer.__getgreek(S, o, vol, o.T, greek)
                         if o.side == "Long": value += g
                         elif o.side == "Short": value -= g
                     values.append(value)
                 res.append((spots, values))
+        
+        # computing greek across various maturities
+        elif len(maturities) > 0:
+            for mat in maturities:
+                values = []
+                for S in spots:
+                    value = 0
+                    for o in strategy:
+                        g = Pricer.__getgreek(S, o, o.sigma, mat, greek)
+                        if o.side == "Long": value += g
+                        elif o.side == "Short": value -= g
+                    values.append(value)
+                res.append((spots, values))
+            
+        # computing greek across specified vol and maturity
         else:
             values = []
             for S in spots:
                 value = 0
                 for o in strategy:
-                    g = Pricer.__getgreek(S, o, o.sigma, greek)
+                    g = Pricer.__getgreek(S, o, o.sigma, o.T, greek)
                     if o.side == "Long": value += g
                     elif o.side == "Short": value -= g
                 values.append(value)
@@ -314,27 +369,27 @@ class Pricer(object):
         return res
     
     @staticmethod
-    def __getgreek(S, o, vol, greek):
+    def __getgreek(S, o, vol, maturity, greek):
 
         g = 0
         if greek == "delta":
-            g = BlackScholes.delta(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.delta(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "vega":
-            g = BlackScholes.vega(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.vega(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "theta":
-            g = BlackScholes.theta(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.theta(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "rho":
-            g = BlackScholes.rho(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.rho(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "gamma":
-            g = BlackScholes.gamma(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.gamma(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "vanna":
-            g = BlackScholes.vanna(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.vanna(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "volga":
-            g = BlackScholes.volga(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.volga(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "charm":
-            g = BlackScholes.charm(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.charm(o.typ, S, o.K, maturity, o.r, o.q, vol)
         elif greek == "veta":
-            g = BlackScholes.veta(o.typ, S, o.K, o.T, o.r, o.q, vol)
+            g = BlackScholes.veta(o.typ, S, o.K, maturity, o.r, o.q, vol)
 
         return g
 
@@ -378,7 +433,7 @@ if __name__ == "__main__":
 
     K = 100
     T = 1
-    r = 0.1
+    r = 0.0
     q = 0
     sigma = 0.25
 
@@ -388,7 +443,7 @@ if __name__ == "__main__":
     
     strategy = [C]
 
-    Pricer.plot(strategy, plots = ['payoff', 'price', 'delta', 'gamma'], diffvols = True)
+    Pricer.plot(strategy, plots = ['payoff', 'price', 'theta'], diffvols = False)
 
 
 
