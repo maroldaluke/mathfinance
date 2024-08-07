@@ -348,13 +348,17 @@ class Pricer(object):
     
 if __name__ == "__main__":
 
+    """
+
     T = 1
     r = 0.05
     q = 0.01
     sigma = 0.15
 
-    C = Option("C", "Long", 90, T, r, q, sigma)
-    P = Option("C", "Short", 110, T, r, q, sigma)
+    # K = 100 digital call
+
+    C = Option("C", "Long", 98, T, r, q, sigma)
+    P = Option("C", "Short", 100, T, r, q, sigma)
 
     downside_put = Option("P", "Short", 90, T, r, q, 0.40)
     upside_call = Option("C", "Long", 110, T, r, q, 0.10)
@@ -362,8 +366,29 @@ if __name__ == "__main__":
     shortdated_call = Option("C", "Short", 100, 0.25, r, q, 0.10)
     longdated_call = Option("C", "Long", 100, 1, r, q, 0.10)
 
-    strategy = [C]
+    strategy = [C, P]
     riskreversal = [downside_put, upside_call]
     calendarspread = [shortdated_call, longdated_call]
 
-    Pricer.plot(strategy, plots = ['payoff', 'price', 'gamma', 'veta'], diffvols = True)
+    Pricer.plot(strategy, plots = ['payoff', 'price', 'delta', 'gamma'], diffvols = True)
+
+    """
+
+    # box spread
+
+    K = 100
+    T = 1
+    r = 0.1
+    q = 0
+    sigma = 0.25
+
+    # long straddle
+    C = Option("C", "Long", K, T, r, q, sigma)
+    # P1 = Option("P", "Long", K, T, r, q, sigma)
+    
+    strategy = [C]
+
+    Pricer.plot(strategy, plots = ['payoff', 'price', 'delta', 'gamma'], diffvols = True)
+
+
+
